@@ -5,7 +5,7 @@ import { AuthTokenType, type JWTPayload } from './models/auth.models';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from '@user/dto/create-user.dto';
 import { PasswordHashHelper } from '@utils/password-hash.helper';
-import { User } from '@user/entity/user.entity';
+import { User } from '@user/entities/user.entity';
 
 @Injectable()
 export class AuthService {
