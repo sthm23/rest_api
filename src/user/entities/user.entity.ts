@@ -1,5 +1,5 @@
 
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Index } from 'typeorm';
 
 @Entity({
     name: 'users',
@@ -8,6 +8,7 @@ export class User {
     @PrimaryGeneratedColumn()
     id: number;
 
+    @Index({ unique: true })
     @Column()
     login: string;
 
