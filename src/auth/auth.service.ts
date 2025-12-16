@@ -4,7 +4,6 @@ import { UserService } from '@user/user.service';
 import { AuthTokenType, type JWTPayload } from './models/auth.models';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from '@user/dto/create-user.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { PasswordHashHelper } from '@utils/password-hash.helper';
 import { User } from '@user/entity/user.entity';
 
@@ -34,7 +33,7 @@ export class AuthService {
     }
   }
 
-  async refreshTokens(dto: RefreshTokenDto): Promise<Omit<AuthTokenType, 'refreshToken'>> {
+  async refreshTokens(dto: JWTPayload & { refreshToken: string }): Promise<AuthTokenType> {
     const user = await this.usersService.findOneById(dto.userId);
     if (!user) throw new ForbiddenException('Access Denied');
     const secret = this.configService.get('JWT_ACCESS');
@@ -47,7 +46,8 @@ export class AuthService {
         expiresIn
       });
       return {
-        accessToken: token
+        accessToken: token,
+        refreshToken: dto.refreshToken,
       };
     } catch (error) {
       console.log(error);
@@ -55,6 +55,12 @@ export class AuthService {
       throw new ForbiddenException('Access Denied');
 
     }
+  }
+
+  async logout(payload: JWTPayload): Promise<{ message: string }> {
+    const user = await this.usersService.findOneById(payload.userId);
+    if (!user) throw new NotFoundException('User not found');
+    return { message: 'Logout successful' };
   }
 
   async validateUser(login: string, pass: string): Promise<User | null> {
