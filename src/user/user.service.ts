@@ -1,28 +1,48 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entity/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { PasswordHashHelper } from '@utils/password-hash.helper';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    private configService: ConfigService
   ) { }
 
 
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+  async create(createUserDto: CreateUserDto) {
+
+    try {
+      const user = await this.usersRepository.findOneBy({ login: createUserDto.login });
+      if (user) throw new ForbiddenException('login already existing');
+
+      const userEntity = this.usersRepository.create(createUserDto);
+      userEntity.password = await PasswordHashHelper.hash(
+        userEntity.password,
+        +this.configService.get('SALT')
+      );
+      const newUser = await this.usersRepository.save(userEntity);
+      return { ...newUser, password: undefined };
+    } catch (error: any) {
+      throw new BadRequestException(error.message);
+    }
   }
 
   findAll() {
     return `This action returns all user`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  findOneById(id: number) {
+    return this.usersRepository.findOneByOrFail({ id });
+  }
+  findOneByLogin(login: string) {
+    return this.usersRepository.findOneBy({ login });
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {
