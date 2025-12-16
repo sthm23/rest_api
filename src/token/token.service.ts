@@ -13,7 +13,7 @@ export class TokenService {
   ) { }
 
   async saveRefreshToken(userId: number, refreshToken: string) {
-    const hash = await PasswordHashHelper.hash(refreshToken, 10);
+    const hash = await PasswordHashHelper.hash(refreshToken, Number(process.env.SALT) || 10);
 
     const token = this.repo.create({
       userId,
