@@ -2,65 +2,87 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException,
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { UserService } from '@user/user.service';
 import { AuthTokenType, type JWTPayload } from './models/auth.models';
-import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from '@user/dto/create-user.dto';
 import { PasswordHashHelper } from '@utils/password-hash.helper';
 import { User } from '@user/entities/user.entity';
-
+import { TokenService } from '@token/token.service';
+import { type Response } from 'express';
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UserService,
     private jwtService: JwtService,
-    private configService: ConfigService
+    private tokensService: TokenService,
   ) { }
 
-  async signIn(login: string, password: string): Promise<AuthTokenType> {
-    const user = await this.validateUser(login, password);
+  async signin(res: Response, dto: CreateUserDto) {
+    const user = await this.validateUser(dto.login, dto.password);
     if (!user) throw new UnauthorizedException();
-    const tokens = await this.getTokens(user);
-    return tokens
+    const tokens = await this.login(user.id);
+
+    this.setRefreshTokenCookie(res, tokens.refreshToken);
+
+    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
   }
 
-  async signUp(createUserDto: CreateUserDto): Promise<AuthTokenType> {
+  async refreshToken(res: Response, refreshToken?: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token not found');
+    }
 
+    const tokens = await this.refreshTokens(refreshToken);
+
+    this.setRefreshTokenCookie(res, tokens.refreshToken);
+
+    return { accessToken: tokens.accessToken };
+  }
+
+  async refreshTokens(refreshToken: string): Promise<AuthTokenType> {
+    const secret = process.env.JWT_REFRESH_SECRET_SECRET;
+    const payload = await this.jwtService.verifyAsync(refreshToken, {
+      secret
+    });
+
+    const tokenFromDb =
+      await this.tokensService.findValidToken(payload.sub, refreshToken);
+
+    if (!tokenFromDb) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    await this.tokensService.revokeToken(tokenFromDb.id);
+
+    const tokens = await this.generateTokens(payload.sub);
+    await this.tokensService.saveRefreshToken(
+      payload.sub,
+      tokens.refreshToken,
+    );
+
+    return tokens;
+  }
+
+  async signUp(createUserDto: CreateUserDto) {
     try {
-      const newUser = await this.usersService.create(createUserDto);
-      const tokens = await this.getTokens(newUser);
+      const user = await this.usersService.create(createUserDto);
+      const tokens = await this.login(user.id);
       return tokens;
-    } catch (error: any) {
+    } catch (error) {
       throw new BadRequestException(error.message);
     }
   }
 
-  async refreshTokens(dto: JWTPayload & { refreshToken: string }): Promise<AuthTokenType> {
-    const user = await this.usersService.findOneById(dto.userId);
-    if (!user) throw new ForbiddenException('Access Denied');
-    const secret = this.configService.get('JWT_ACCESS');
-    const expiresIn = this.configService.get('JWT_ACCESS_EXPIRE');
+  async logout(res: Response & { user?: User }, refreshToken?: string) {
     try {
-      const token = await this.getToken({
-        userId: dto.userId,
-      }, {
-        secret,
-        expiresIn
-      });
-      return {
-        accessToken: token,
-        refreshToken: dto.refreshToken,
-      };
+      if (!refreshToken) {
+        throw new BadRequestException('Refresh token not found');
+      }
+      await this.tokensService.revokeByRefreshToken(refreshToken, res.user?.id);
+
+      res.clearCookie('refreshToken', { path: '/' });
+      return { message: 'Logged out' };
     } catch (error) {
-      console.log(error);
-
-      throw new ForbiddenException('Access Denied');
-
+      throw new BadRequestException(error.message);
     }
-  }
-
-  async logout(payload: JWTPayload): Promise<{ message: string }> {
-    const user = await this.usersService.findOneById(payload.userId);
-    if (!user) throw new NotFoundException('User not found');
-    return { message: 'Logout successful' };
   }
 
   async validateUser(login: string, pass: string): Promise<User | null> {
@@ -78,39 +100,49 @@ export class AuthService {
     }
   }
 
-  private async getTokens(user: Omit<User, 'password'>): Promise<AuthTokenType> {
-    const payload = {
-      userId: user.id,
-    } as JWTPayload;
-    try {
-      const secret = this.configService.get('JWT_ACCESS');
-      const expiresIn = this.configService.get('JWT_ACCESS_EXPIRE');
-      const secretRefresh = this.configService.get('JWT_REFRESH');
-      const expiresInRefresh = this.configService.get('JWT_REFRESH_EXPIRE');
+  private async login(userId: number) {
 
-      const [accessToken, refreshToken] = await Promise.all([
-        this.getToken(payload, {
-          secret,
-          expiresIn,
-        }),
-        this.getToken(payload, {
-          secret: secretRefresh,
-          expiresIn: expiresInRefresh,
-        }),
+    const tokens = await this.generateTokens(userId);
 
-      ]);
+    await this.tokensService.saveRefreshToken(
+      userId,
+      tokens.refreshToken,
+    );
 
-      return {
-        accessToken,
-        refreshToken,
-      };
-    } catch (error: any) {
-      throw new ForbiddenException(error?.message);
-    }
-
+    return tokens;
   }
 
-  private async getToken(payload: JWTPayload, option: JwtSignOptions): Promise<string> {
-    return this.jwtService.signAsync(payload, option);
+  private async generateTokens(userId: number): Promise<AuthTokenType> {
+    const payload = { sub: userId };
+
+    try {
+      const accessToken = await this.generateToken(payload, {
+        secret: process.env.JWT_ACCESS_SECRET,
+        expiresIn: process.env.JWT_ACCESS_EXPIRE as any,
+      });
+      const refreshToken = await this.generateToken(payload, {
+        secret: process.env.JWT_REFRESH_SECRET,
+        expiresIn: process.env.JWT_REFRESH_EXPIRE as any,
+      });
+
+      return { accessToken, refreshToken };
+    } catch (error) {
+      throw new ForbiddenException('Error generating tokens');
+    }
+  }
+
+  private setRefreshTokenCookie(res: Response, refreshToken: string) {
+    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge,
+      path: '/',
+    });
+  }
+
+  private generateToken(payload: JWTPayload, options: JwtSignOptions) {
+    return this.jwtService.signAsync(payload, options);
   }
 }

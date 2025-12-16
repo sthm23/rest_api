@@ -1,12 +1,9 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Get } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Get, Req, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '@user/dto/create-user.dto';
 import { LocalAuthGuard } from './guard/local_passport.guard';
-import { RefreshTokenGuard } from './guard/refresh-token.guard';
 import { AuthJWTGuard } from './guard/auth.guard';
-import { User } from '@utils/user-decorator';
-import { type JWTPayload } from './models/auth.models';
-
+import { type Request, type Response } from 'express';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) { }
@@ -14,26 +11,34 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @HttpCode(HttpStatus.OK)
   @Post('signin')
-  signIn(@Body() signInDto: CreateUserDto) {
-    return this.authService.signIn(signInDto.login, signInDto.password);
+  async signin(
+    @Body() dto: CreateUserDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.signin(res, dto);
   }
 
-  @UseGuards(RefreshTokenGuard)
+  @UseGuards(AuthJWTGuard)
+  @Get('logout')
+  async logout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.logout(res, req.cookies['refreshToken']);
+  }
+
   @HttpCode(HttpStatus.OK)
   @Post('signin/new_token')
-  refreshToken(@User() payload: JWTPayload & { refreshToken: string }) {
-    return this.authService.refreshTokens(payload);
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.refreshToken(res, req.cookies['refreshToken']);
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('signup')
   signup(@Body() createUserDto: CreateUserDto) {
     return this.authService.signUp(createUserDto);
-  }
-
-  @UseGuards(AuthJWTGuard)
-  @Get('logout')
-  logOut(@User() payload: JWTPayload) {
-    return this.authService.logout(payload);
   }
 }

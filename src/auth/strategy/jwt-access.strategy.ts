@@ -8,7 +8,7 @@ import { JWTPayload } from '@auth/models/auth.models';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt-access') {
     constructor(config: ConfigService) {
-        const secretOrKey = config.get('JWT_ACCESS')
+        const secretOrKey = config.get('JWT_ACCESS_SECRET');
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,

@@ -6,5 +6,5 @@ export interface AuthTokenType {
 }
 
 export interface JWTPayload {
-  userId: number;
+  sub: number;
 }

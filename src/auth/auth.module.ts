@@ -4,8 +4,8 @@ import { AuthController } from './auth.controller';
 import { UserModule } from '@user/user.module';
 import { JwtModule } from '@nestjs/jwt';
 import { LocalStrategy } from './strategy/local.strategy';
-import { RefreshTokenStrategy } from './strategy/jwt-refresh.strategy';
 import { JwtStrategy } from './strategy/jwt-access.strategy';
+import { TokenModule } from '@token/token.module';
 
 @Module({
   imports: [
@@ -17,8 +17,9 @@ import { JwtStrategy } from './strategy/jwt-access.strategy';
         expiresIn: Number(process.env.JWT_ACCESS_EXPIRE) || '10M', // 10 minutes
       },
     }),
+    TokenModule
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, RefreshTokenStrategy, LocalStrategy],
+  providers: [AuthService, JwtStrategy, LocalStrategy],
 })
 export class AuthModule { }

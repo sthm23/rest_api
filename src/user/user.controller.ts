@@ -11,7 +11,7 @@ export class UserController {
 
   @Get('info')
   findOne(@User() payload: JWTPayload) {
-    return this.userService.findOneById(payload.userId);
+    return this.userService.findOneById(payload.sub);
   }
 
   @Delete(':id')
