@@ -5,7 +5,7 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeor
 })
 export class File {
     @PrimaryGeneratedColumn('uuid')
-    id: number;
+    id: string;
 
     @Column()
     user_id: number;

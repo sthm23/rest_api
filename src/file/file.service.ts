@@ -1,5 +1,7 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { UpdateFileDto } from './dto/update-file.dto';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
+import { createReadStream } from 'node:fs';
+import path, { join } from 'node:path';
+import type { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { File } from './entities/file.entity'
@@ -31,16 +33,6 @@ export class FileService {
     }
   }
 
-  private async handleFile(file: Express.Multer.File) {
-    try {
-      const fileName = file.originalname
-      FileHelper.writeFile(fileName, file.buffer);
-      return `/static/${fileName}`;
-    } catch (error) {
-      throw new ForbiddenException(error?.message);
-    }
-  }
-
   async findAll() {
     try {
       return this.filesRepo.find();
@@ -49,11 +41,14 @@ export class FileService {
     }
   }
 
-  async findOne(id: number) {
+  async findOne(id: string, userId: number) {
     try {
       const file = await this.filesRepo.findOneBy({ id });
 
       if (!file) throw new NotFoundException('File not found');
+      if (file.user_id !== userId) {
+        throw new ForbiddenException('You do not have access to update this file');
+      }
 
       return file;
     } catch (error) {
@@ -61,15 +56,71 @@ export class FileService {
     }
   }
 
-  update(id: number, updateFileDto: UpdateFileDto) {
-    return `This action updates a #${id} file`;
+  async update(id: string, file: Express.Multer.File, payload: JWTPayload) {
+    try {
+      const existFile = await this.filesRepo.findOneBy({ id });
+      if (!existFile) throw new NotFoundException('File not found');
+      if (existFile.user_id !== payload.sub) {
+        throw new ForbiddenException('You do not have access to update this file');
+      }
+      const filePath = await this.handleFile(file);
+      const newFile = {
+        ...existFile,
+        user_id: payload.sub,
+        original_name: file.originalname,
+        extension: file.originalname.split('.').pop()!,
+        mime_type: file.mimetype,
+        size: file.size.toString(),
+        path: filePath,
+      };
+      FileHelper.deleteFile(file.path);
+
+      return this.filesRepo.save(newFile);
+
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
   }
 
-  downloadOne(id: number) {
-    return `This action downloads a #${id} file`;
+  async downloadOne(id: string, userId: number, res: Response): Promise<StreamableFile> {
+    const existFile = await this.filesRepo.findOneBy({ id });
+    if (!existFile) throw new NotFoundException('File not found');
+    if (existFile.user_id !== userId) {
+      throw new ForbiddenException('You do not have access to this file');
+    }
+    const file = createReadStream(join(process.cwd(), existFile.path));
+    const fileName = path.basename(existFile.original_name);
+
+    res.set({
+      'Content-Type': existFile.mime_type,
+      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`
+    });
+    return new StreamableFile(file);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} file`;
+  async remove(id: string, userId: number) {
+    try {
+      const file = await this.filesRepo.findOneBy({ id });
+      if (!file) throw new NotFoundException('File not found');
+      if (file.user_id !== userId) {
+        throw new ForbiddenException('You do not have access to delete this file');
+      }
+      FileHelper.deleteFile(file.path);
+      await this.filesRepo.delete(id);
+      return { message: 'File deleted successfully' };
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+
+  private async handleFile(file: Express.Multer.File) {
+    try {
+      const fileName = file.originalname
+      FileHelper.writeFile(fileName, file.buffer);
+      return `/uploads/${fileName}`;
+    } catch (error) {
+      throw new ForbiddenException(error?.message);
+    }
   }
 }

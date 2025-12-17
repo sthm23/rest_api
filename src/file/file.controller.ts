@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Put, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Put, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, Res, StreamableFile } from '@nestjs/common';
 import { FileService } from './file.service';
-import { CreateFileDto } from './dto/create-file.dto';
-import { UpdateFileDto } from './dto/update-file.dto';
+import { createReadStream } from 'node:fs';
+import { join } from 'node:path';
+import type { Response } from 'express';
 import { AuthJWTGuard } from '@auth/guard/auth.guard';
 import { User } from '@utils/user-decorator';
 import { type JWTPayload } from '@auth/models/auth.models';
@@ -33,22 +34,32 @@ export class FileController {
   }
 
   @Get('download/:id')
-  downloadOne(@Param('id') id: string) {
-    return this.fileService.downloadOne(+id);
+  async downloadOne(@User() payload: JWTPayload, @Param('id') id: string, @Res({ passthrough: true }) res: Response) {
+    return this.fileService.downloadOne(id, payload.sub, res);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.fileService.findOne(+id);
+  findOne(@Param('id') id: string, @User() payload: JWTPayload) {
+    return this.fileService.findOne(id, payload.sub);
   }
 
   @Put('update/:id')
-  update(@Param('id') id: string, @Body() updateFileDto: UpdateFileDto) {
-    return this.fileService.update(+id, updateFileDto);
+  @UseInterceptors(FileInterceptor('file'))
+  update(@Param('id') id: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: (1000 * 1024 * 5) }), //5MB
+        ],
+      })
+    ) file: Express.Multer.File,
+    @User() payload: JWTPayload
+  ) {
+    return this.fileService.update(id, file, payload);
   }
 
   @Delete('delete/:id')
-  remove(@Param('id') id: string) {
-    return this.fileService.remove(+id);
+  remove(@Param('id') id: string, @User() payload: JWTPayload) {
+    return this.fileService.remove(id, payload.sub);
   }
 }

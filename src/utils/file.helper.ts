@@ -9,4 +9,11 @@ export class FileHelper {
         const filePath = path.join(outputDir, fileName);
         fs.writeFileSync(filePath, buffer)
     }
+
+    static deleteFile(filePath: string) {
+        const fullPath = path.join(process.cwd(), filePath);
+        if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+        }
+    }
 }
