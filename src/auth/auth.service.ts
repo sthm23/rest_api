@@ -38,7 +38,7 @@ export class AuthService {
   }
 
   async refreshTokens(refreshToken: string): Promise<AuthTokenType> {
-    const secret = process.env.JWT_REFRESH_SECRET_SECRET;
+    const secret = process.env.JWT_REFRESH_SECRET;
     const payload = await this.jwtService.verifyAsync(refreshToken, {
       secret
     });
@@ -52,7 +52,7 @@ export class AuthService {
 
     await this.tokensService.revokeToken(tokenFromDb.id);
 
-    const newRefreshToken = await this.generateToken(payload, {
+    const newRefreshToken = await this.generateToken({ sub: payload.sub }, {
       secret: process.env.JWT_REFRESH_SECRET,
       expiresIn: process.env.JWT_REFRESH_EXPIRE as any,
     });
@@ -123,27 +123,6 @@ export class AuthService {
       expiresIn: process.env.JWT_ACCESS_EXPIRE as any,
     });
     return { accessToken, refreshToken };
-  }
-
-  private async generateTokens(userId: number): Promise<AuthTokenType> {
-    const payload = { sub: userId };
-
-    try {
-      const refreshToken = await this.generateToken(payload, {
-        secret: process.env.JWT_REFRESH_SECRET,
-        expiresIn: process.env.JWT_REFRESH_EXPIRE as any,
-      });
-
-      const accessToken = await this.generateToken(payload, {
-        secret: process.env.JWT_ACCESS_SECRET,
-        expiresIn: process.env.JWT_ACCESS_EXPIRE as any,
-      });
-
-
-      return { accessToken, refreshToken };
-    } catch (error) {
-      throw new ForbiddenException('Error generating tokens');
-    }
   }
 
   private setRefreshTokenCookie(res: Response, refreshToken: string) {

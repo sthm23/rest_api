@@ -1,7 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Put, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, Res, StreamableFile } from '@nestjs/common';
+import { Controller, Get, Post, Param, Delete, Put, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, Res } from '@nestjs/common';
 import { FileService } from './file.service';
-import { createReadStream } from 'node:fs';
-import { join } from 'node:path';
 import type { Response } from 'express';
 import { AuthJWTGuard } from '@auth/guard/auth.guard';
 import { User } from '@utils/user-decorator';
