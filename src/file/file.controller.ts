@@ -1,20 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Put } from '@nestjs/common';
 import { FileService } from './file.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { UpdateFileDto } from './dto/update-file.dto';
 
 @Controller('file')
 export class FileController {
-  constructor(private readonly fileService: FileService) {}
+  constructor(private readonly fileService: FileService) { }
 
-  @Post()
+  @Post('upload')
   create(@Body() createFileDto: CreateFileDto) {
     return this.fileService.create(createFileDto);
   }
 
-  @Get()
+  @Get('list')
   findAll() {
     return this.fileService.findAll();
+  }
+
+  @Get('download/:id')
+  downloadOne(@Param('id') id: string) {
+    return this.fileService.downloadOne(+id);
   }
 
   @Get(':id')
@@ -22,12 +27,12 @@ export class FileController {
     return this.fileService.findOne(+id);
   }
 
-  @Patch(':id')
+  @Put('update/:id')
   update(@Param('id') id: string, @Body() updateFileDto: UpdateFileDto) {
     return this.fileService.update(+id, updateFileDto);
   }
 
-  @Delete(':id')
+  @Delete('delete/:id')
   remove(@Param('id') id: string) {
     return this.fileService.remove(+id);
   }
