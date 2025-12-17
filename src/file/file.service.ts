@@ -17,14 +17,14 @@ export class FileService {
 
   async create(file: Express.Multer.File, payload: JWTPayload) {
     try {
-      // const filePath = await this.handleFile(file);
+      const filePath = await this.handleFile(file);
       const newFile = this.filesRepo.create({
         user_id: payload.sub,
         original_name: file.originalname,
         extension: file.originalname.split('.').pop()!,
         mime_type: file.mimetype,
         size: file.size.toString(),
-        path: "/uploads/Анализ содержания витаминов.pdf",
+        path: filePath,
       });
 
       return this.filesRepo.save(newFile);
