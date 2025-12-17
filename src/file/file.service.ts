@@ -17,14 +17,14 @@ export class FileService {
 
   async create(file: Express.Multer.File, payload: JWTPayload) {
     try {
-      const filePath = await this.handleFile(file);
+      // const filePath = await this.handleFile(file);
       const newFile = this.filesRepo.create({
         user_id: payload.sub,
         original_name: file.originalname,
         extension: file.originalname.split('.').pop()!,
         mime_type: file.mimetype,
         size: file.size.toString(),
-        path: filePath,
+        path: "/uploads/Анализ содержания витаминов.pdf",
       });
 
       return this.filesRepo.save(newFile);
@@ -33,9 +33,19 @@ export class FileService {
     }
   }
 
-  async findAll() {
+  async findAll(page = 1, list_size = 10) {
     try {
-      return this.filesRepo.find();
+      const files = await this.filesRepo.find({
+        skip: (page - 1) * list_size,
+        take: list_size,
+      });
+      const count = await this.filesRepo.count();
+      return {
+        data: files,
+        page: page,
+        list_size: list_size,
+        count: count,
+      }
     } catch (error) {
       throw new BadRequestException(error.message);
     }

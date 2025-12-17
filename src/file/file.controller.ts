@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Param, Delete, Put, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, Res } from '@nestjs/common';
+import { Controller, Get, Post, Param, Delete, Put, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, Res, Query } from '@nestjs/common';
 import { FileService } from './file.service';
 import type { Response } from 'express';
 import { AuthJWTGuard } from '@auth/guard/auth.guard';
 import { User } from '@utils/user-decorator';
 import { type JWTPayload } from '@auth/models/auth.models';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { type FileListQuery } from './models/file.models';
 
 @UseGuards(AuthJWTGuard)
 @Controller('file')
@@ -27,8 +28,11 @@ export class FileController {
   }
 
   @Get('list')
-  findAll() {
-    return this.fileService.findAll();
+  findAll(@Query() query: FileListQuery) {
+    return this.fileService.findAll(
+      Number(query.page),
+      Number(query.list_size)
+    );
   }
 
   @Get('download/:id')
