@@ -5,7 +5,7 @@ import { User } from '@utils/user-decorator';
 import { type JWTPayload } from '@auth/models/auth.models';
 
 @UseGuards(AuthJWTGuard)
-@Controller('user')
+@Controller()
 export class UserController {
   constructor(private readonly userService: UserService) { }
 

@@ -4,7 +4,7 @@ import { CreateUserDto } from '@user/dto/create-user.dto';
 import { LocalAuthGuard } from './guard/local_passport.guard';
 import { AuthJWTGuard } from './guard/auth.guard';
 import { type Request, type Response } from 'express';
-@Controller('auth')
+@Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) { }
 

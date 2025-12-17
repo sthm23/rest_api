@@ -52,13 +52,20 @@ export class AuthService {
 
     await this.tokensService.revokeToken(tokenFromDb.id);
 
-    const tokens = await this.generateTokens(payload.sub);
-    await this.tokensService.saveRefreshToken(
-      payload.sub,
-      tokens.refreshToken,
-    );
+    const newRefreshToken = await this.generateToken(payload, {
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: process.env.JWT_REFRESH_EXPIRE as any,
+    });
 
-    return tokens;
+    const savedToken = await this.tokensService.saveRefreshToken(
+      payload.sub,
+      newRefreshToken,
+    );
+    const accessToken = await this.generateToken({ sub: payload.sub, sessionId: savedToken.id }, {
+      secret: process.env.JWT_ACCESS_SECRET,
+      expiresIn: process.env.JWT_ACCESS_EXPIRE as any,
+    });
+    return { accessToken, refreshToken };
   }
 
   async signUp(createUserDto: CreateUserDto) {
@@ -102,28 +109,36 @@ export class AuthService {
 
   private async login(userId: number) {
 
-    const tokens = await this.generateTokens(userId);
+    const refreshToken = await this.generateToken({ sub: userId }, {
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: process.env.JWT_REFRESH_EXPIRE as any,
+    });
 
-    await this.tokensService.saveRefreshToken(
+    const savedToken = await this.tokensService.saveRefreshToken(
       userId,
-      tokens.refreshToken,
+      refreshToken,
     );
-
-    return tokens;
+    const accessToken = await this.generateToken({ sub: userId, sessionId: savedToken.id }, {
+      secret: process.env.JWT_ACCESS_SECRET,
+      expiresIn: process.env.JWT_ACCESS_EXPIRE as any,
+    });
+    return { accessToken, refreshToken };
   }
 
   private async generateTokens(userId: number): Promise<AuthTokenType> {
     const payload = { sub: userId };
 
     try {
-      const accessToken = await this.generateToken(payload, {
-        secret: process.env.JWT_ACCESS_SECRET,
-        expiresIn: process.env.JWT_ACCESS_EXPIRE as any,
-      });
       const refreshToken = await this.generateToken(payload, {
         secret: process.env.JWT_REFRESH_SECRET,
         expiresIn: process.env.JWT_REFRESH_EXPIRE as any,
       });
+
+      const accessToken = await this.generateToken(payload, {
+        secret: process.env.JWT_ACCESS_SECRET,
+        expiresIn: process.env.JWT_ACCESS_EXPIRE as any,
+      });
+
 
       return { accessToken, refreshToken };
     } catch (error) {

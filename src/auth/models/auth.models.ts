@@ -7,4 +7,5 @@ export interface AuthTokenType {
 
 export interface JWTPayload {
   sub: number;
+  sessionId?: string;
 }

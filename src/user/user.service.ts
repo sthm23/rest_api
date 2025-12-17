@@ -33,8 +33,9 @@ export class UserService {
     }
   }
 
-  findOneById(id: number) {
-    return this.usersRepository.findOneByOrFail({ id });
+  async findOneById(id: number) {
+    const user = await this.usersRepository.findOneByOrFail({ id });
+    return user.login
   }
 
   findOneByLogin(login: string) {

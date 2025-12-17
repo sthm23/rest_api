@@ -21,7 +21,7 @@ export class TokenService {
       expiresAt: addDays(new Date(), 7),
     });
 
-    await this.repo.save(token);
+    return await this.repo.save(token);
   }
 
   async findValidToken(userId: number, refreshToken: string) {
@@ -58,5 +58,9 @@ export class TokenService {
         return;
       }
     }
+  }
+
+  async findSession(sessionId: string) {
+    return this.repo.findOneBy({ id: sessionId });
   }
 }
