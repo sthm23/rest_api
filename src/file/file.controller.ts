@@ -1,15 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Put, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator } from '@nestjs/common';
 import { FileService } from './file.service';
 import { CreateFileDto } from './dto/create-file.dto';
 import { UpdateFileDto } from './dto/update-file.dto';
+import { AuthJWTGuard } from '@auth/guard/auth.guard';
+import { User } from '@utils/user-decorator';
+import { type JWTPayload } from '@auth/models/auth.models';
+import { FileInterceptor } from '@nestjs/platform-express';
 
+@UseGuards(AuthJWTGuard)
 @Controller('file')
 export class FileController {
   constructor(private readonly fileService: FileService) { }
 
   @Post('upload')
-  create(@Body() createFileDto: CreateFileDto) {
-    return this.fileService.create(createFileDto);
+  @UseInterceptors(FileInterceptor('file'))
+  create(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 1000 * 1024 * 5 }), //5MB
+        ],
+      })
+    ) file: Express.Multer.File,
+    @User() payload: JWTPayload
+  ) {
+    return this.fileService.create(file, payload);
   }
 
   @Get('list')
