@@ -22,8 +22,7 @@ export class FileService {
         extension: file.originalname.split('.').pop()!,
         mime_type: file.mimetype,
         size: file.size.toString(),
-        path: file.path,
-        url: filePath,
+        path: filePath,
       });
 
       return this.filesRepo.save(newFile);
@@ -35,15 +34,14 @@ export class FileService {
   private async handleFile(file: Express.Multer.File) {
     try {
       const fileName = file.originalname
-      const originalBuffer = await FileHelper.compressImage(file);
-      FileHelper.writeFile(fileName, originalBuffer);
+      FileHelper.writeFile(fileName, file.buffer);
       return `/static/${fileName}`;
     } catch (error) {
       throw new ForbiddenException(error?.message);
     }
   }
 
-  findAll() {
+  async findAll() {
     try {
       return this.filesRepo.find();
     } catch (error) {

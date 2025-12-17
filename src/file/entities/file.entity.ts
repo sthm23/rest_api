@@ -25,9 +25,6 @@ export class File {
     @Column()
     path: string;
 
-    @Column()
-    url: string;
-
     @CreateDateColumn()
     created_at: Date;
 }
