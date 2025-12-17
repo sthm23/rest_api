@@ -20,6 +20,32 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@utils": [
+        "./src/utils"
+      ],
+      "@utils/*": [
+        "./src/utils/*"
+      ],
+      "@user": [
+        "./src/user"
+      ],
+      "@user/*": [
+        "./src/user/*"
+      ],
+      "@auth": [
+        "./src/auth"
+      ],
+      "@auth/*": [
+        "./src/auth/*"
+      ],
+      "@token": [
+        "./src/token"
+      ],
+      "@token/*": [
+        "./src/token/*"
+      ],
+    }
   }
 }

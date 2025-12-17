@@ -1,98 +1,162 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# File Storage REST API (NestJS)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+REST API сервис для аутентификации пользователей и управления файлами.  
+Реализован в рамках тестового задания для Node.js (NestJS).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 🚀 Стек технологий
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- Node.js
+- NestJS
+- MySQL
+- TypeORM
+- JWT (Access + Refresh tokens)
+- bcrypt
+- Multer
+- Local File Storage
+- Docker (опционально)
 
-## Project setup
+---
 
-```bash
-$ npm install
-```
+## 📌 Функциональные возможности
 
-## Compile and run the project
+### 🔐 Аутентификация и авторизация
+- Регистрация пользователей
+- Авторизация по JWT
+- Access token (10 минут)
+- Refresh token с возможностью обновления
+- Поддержка нескольких устройств для одного пользователя
+- Logout без инвалидирования других сессий
 
-```bash
-# development
-$ npm run start
+### 📂 Управление файлами
+- Загрузка файлов
+- Получение списка файлов с пагинацией
+- Получение информации о файле
+- Скачивание файла
+- Обновление файла
+- Удаление файла
 
-# watch mode
-$ npm run start:dev
+---
 
-# production mode
-$ npm run start:prod
-```
+## 🌐 CORS
 
-## Run tests
+CORS настроен для доступа с любого домена.
 
-```bash
-# unit tests
-$ npm run test
+---
 
-# e2e tests
-$ npm run test:e2e
+## 🗄️ Структура базы данных
 
-# test coverage
-$ npm run test:cov
-```
+### Users
+| Поле       | Тип      | Описание                   |
+| ---------- | -------- | -------------------------- |
+| id         | number   | Идентификатор пользователя |
+| login      | string   | Email или номер телефона   |
+| password   | string   | Хеш пароля                 |
+| is_active  | boolean  | статус юзера               |
+| created_at | datetime | Дата создания              |
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Tokens
+| Поле               | Тип      | Описание             |
+| ------------------ | -------- | -------------------- |
+| id                 | UUID     | Идентификатор токена |
+| user_id            | number   | Пользователь         |
+| refresh_token_hash | string   | Хеш refresh токена   |
+| is_revoked         | boolean  | Отозван ли токен     |
+| expires_at         | datetime | Время истечения      |
+| created_at         | datetime | Дата создания        |
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Используется для поддержки **нескольких устройств**.
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+---
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Files
+| Поле          | Тип      | Описание            |
+| ------------- | -------- | ------------------- |
+| id            | UUID     | Идентификатор файла |
+| user_id       | number   | Владелец            |
+| original_name | string   | Название файла      |
+| extension     | string   | Расширение          |
+| mime_type     | string   | MIME тип            |
+| size          | number   | Размер              |
+| path          | string   | Путь к файлу        |
+| created_at    | datetime | Дата загрузки       |
 
-## Resources
+---
 
-Check out a few resources that may come in handy when working with NestJS:
+## 🔐 Логика работы с токенами
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Access token
+- Срок жизни: **10 минут**
+- Используется для доступа к защищённым роутам
 
-## Support
+### Refresh token
+- Хранится в БД в виде хеша
+- Один refresh token = одно устройство
+- Используется для обновления access token
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Logout
+- Отзывается **только текущий refresh token**
+- Остальные сессии пользователя продолжают работать
 
-## Stay in touch
+---
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 📡 API Endpoints
 
-## License
+### Auth
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+#### POST /signup
+Регистрация нового пользователя  
+**Response:** access + refresh token
+
+#### POST /signin
+Авторизация пользователя  
+**Response:** access + refresh token
+
+#### POST /signin/new_token
+Обновление access token по refresh token  
+**Response:** новая пара токенов
+
+#### GET /info
+Возвращает ID текущего пользователя  
+Требуется JWT
+
+#### GET /logout
+Выход из системы  
+Требуется JWT
+
+---
+
+### Files (все роуты защищены JWT)
+
+#### POST /file/upload
+Загрузка файла
+
+#### GET /file/list
+Список файлов с пагинацией
+
+Query params:
+- `page` — номер страницы (по умолчанию 1)
+- `list_size` — размер страницы (по умолчанию 10)
+
+#### GET /file/:id
+Получение информации о файле
+
+#### GET /file/download/:id
+Скачивание файла
+
+#### PUT /file/update/:id
+Обновление файла
+
+#### DELETE /file/delete/:id
+Удаление файла
+
+---
+
+## 📁 Хранение файлов
+
+```text
+/uploads
+  {fileId}.{ext}
